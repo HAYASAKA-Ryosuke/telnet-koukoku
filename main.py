@@ -14,6 +14,8 @@ tn_chat.write('nobody\n'.encode('shift_jis'))
 def show_user_chat(chat_win, chat_messages, chat_win_height):
     chat_win.clear()
     chat_win.border()
+    chat_win.addstr(0, 2, " Chat Message ")
+    chat_win.refresh()
     for y, s in enumerate(chat_messages):
         chat_win.addstr(y + 1, 1, s)
     chat_win.refresh()
@@ -92,6 +94,7 @@ def main(stdscr):
     # 入力欄
     input_win = curses.newwin(3, w, h-3, 0)
     input_win.border()
+    input_win.addstr(0, 2, " Input ")
     input_win.addstr(1, 1, "Input: ")
     input_win.nodelay(1)
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')

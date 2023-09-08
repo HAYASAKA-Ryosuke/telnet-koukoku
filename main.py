@@ -61,7 +61,7 @@ def delete_message_to_input_win(input_win, message):
 
 
 def send_message_to_server(message):
-    tn.write((message + "\n").encode('shift_jis'))
+    tn_chat.write((f'{message}\n').encode('shift_jis'))
 
 
 def main(stdscr):

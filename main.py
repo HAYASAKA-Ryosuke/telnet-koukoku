@@ -120,7 +120,7 @@ class Application:
         self.input_win = InputWindow(3, w, h-3, 0)
     
     def send_message_to_server(self):
-        self.tn_chat.write(f'{self.message}\n')
+        self.chat_telnet_client.write(f'{self.message}\n')
 
     def show_chat_messages(self, chat_chunk):
         if chat_chunk:

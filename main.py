@@ -64,8 +64,13 @@ class ChatViewWindow:
         self.__window.border()
         self.__window.addstr(0, 2, title)
         self.__window.refresh()
-        for y, s in enumerate(messages):
-            self.__window.addstr(y + 1, 1, s)
+        h, _ = self.__window.getmaxyx()
+        if len(messages) > (h//2 + 2):
+            for y, s in enumerate(messages[len(messages) - (h//2 + 2) - 1:]):
+                self.__window.addstr(y + 1, 1, s)
+        else:
+            for y, s in enumerate(messages):
+                self.__window.addstr(y + 1, 1, s)
         self.__window.refresh()
         
 
@@ -125,8 +130,6 @@ class Application:
 
     def show_chat_messages(self, chat_chunk):
         if chat_chunk:
-            if len(self.chat_messages) > self.chat_view_text_height:
-                self.chat_messages = self.chat_messages[1:]
             try:
                 self.chat_messages.append(self.ansi_escape.sub('', chat_chunk.decode(ENCODING).replace('\r', '').replace('\n', '')))
             except UnicodeDecodeError:

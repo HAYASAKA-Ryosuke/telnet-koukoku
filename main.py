@@ -116,20 +116,22 @@ class Application:
         self.public_notice_win = PublicNoticeWindow(public_notice_win_height, w, 0, 0)
         chat_view_win_height = 9
         self.chat_view_win = ChatViewWindow(chat_view_win_height, w, h - 12, 0)
-        self.input_win = InputWindow(3, w, h-3, 0)
+        input_win_height = 3
+        self.chat_view_text_height = chat_view_win_height - input_win_height
+        self.input_win = InputWindow(input_win_height, w, h-input_win_height, 0)
     
     def send_message_to_server(self):
         self.chat_telnet_client.write(f'{self.message}\n')
 
     def show_chat_messages(self, chat_chunk):
         if chat_chunk:
-            if len(self.chat_messages) > 6:
+            if len(self.chat_messages) > self.chat_view_text_height:
                 self.chat_messages = self.chat_messages[1:]
             try:
                 self.chat_messages.append(self.ansi_escape.sub('', chat_chunk.decode(ENCODING).replace('\r', '').replace('\n', '')))
             except UnicodeDecodeError:
                 pass
-            self.chat_view_win.show_messages(self.chat_messages)
+            self.chat_view_win.show_messages(re.compile(r'>>\s*(.*?)\s*<<').findall(''.join(self.chat_messages)))
 
     def show_public_notice(self, public_notice_chunk):
         if public_notice_chunk:

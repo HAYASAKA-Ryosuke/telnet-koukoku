@@ -9,3 +9,5 @@ telnet://koukoku.shadan.open.ad.jp
 ``` python
 python3 main.py
 ```
+
+終了したいときには｢exit｣を入力してください

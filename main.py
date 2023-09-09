@@ -109,7 +109,7 @@ def main(stdscr):
             except UnicodeDecodeError:
                 pass
             show_user_chat(chat_win, chat_messages, chat_win_height)
-        chunk = tn.read_some()
+        chunk = tn.read_eager()
         if chunk:
             try:
                 decoded_chunk = chunk.decode('shift_jis')

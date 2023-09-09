@@ -2,7 +2,6 @@ import curses
 import locale
 import telnetlib
 import re
-from enum import Enum
 
 HOST = "koukoku.shadan.open.ad.jp"
 PORT = 23

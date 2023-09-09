@@ -2,143 +2,195 @@ import curses
 import locale
 import telnetlib
 import re
+from enum import Enum
 
 HOST = "koukoku.shadan.open.ad.jp"
 PORT = 23
-
-tn = telnetlib.Telnet(HOST, PORT)
-tn.write('notalk\n'.encode('shift_jis'))
-tn_chat = telnetlib.Telnet(HOST, PORT)
-tn_chat.write('nobody\n'.encode('shift_jis'))
-
-def show_user_chat(chat_win, chat_messages, chat_win_height):
-    chat_win.clear()
-    chat_win.border()
-    chat_win.addstr(0, 2, " Chat Message ")
-    chat_win.refresh()
-    for y, s in enumerate(chat_messages):
-        chat_win.addstr(y + 1, 1, s)
-    chat_win.refresh()
+ENCODING = 'shift_jis'
 
 
-def show_server_message(text_win, receive_message, text_win_height):
-    try:
-        showing_receive_messages = receive_message.split('\r\n')
-        text_win.clear()
-        if len(showing_receive_messages) > text_win_height:
-            for y, s in enumerate(showing_receive_messages[len(showing_receive_messages) - text_win_height:]):
-                text_win.addstr(y, 1, s)
-        else:
-            for y, s in enumerate(showing_receive_messages):
-                text_win.addstr(y, 1, s)
-        text_win.refresh()
-    except curses.error:
-        pass
-    except UnicodeDecodeError:
-        pass
-
-def clear_input_win(input_win):
-    input_win.clear()
-    input_win.border()
-    input_win.addstr(1, 1, "Input: ")
-    input_win.refresh()
-
-def add_message_to_input_win(input_win, c):
-    input_win.addstr(c)
-    input_win.refresh()
-
-
-def is_input_delete_key(c):
-    return c == curses.KEY_BACKSPACE or c == '\x08' or c == '\x7f'
-
-
-def delete_message_to_input_win(input_win, message):
-    y, x = input_win.getyx()
-    if x > 7:
-        input_win.move(1, x-1)
-        input_win.clrtoeol()
-        input_win.border()
-        input_win.addstr(1, 1, f"Input: {message}")
-    input_win.refresh()
-
-
-def send_message_to_server(message):
-    tn_chat.write((f'{message}\n').encode('shift_jis'))
-
-
-def main(stdscr):
-    receive_message = ''
-    message = ''
-    chat_messages = []
-
-    locale.setlocale(locale.LC_ALL, '')
-    curses.nl()
-    curses.raw()
-
-    curses.encoding = 'UTF-8'
+class PublicNoticeTelnetClient:
+    def __init__(self, host, port):
+        self.__connection = telnetlib.Telnet(host, port)
+        self.__connection.write('notalk\n'.encode(ENCODING))
+        
+    def write(self, message):
+        self.__connection.write(message.encode(ENCODING))
+        
+    def read(self):
+        return self.__connection.read_eager()
     
-    curses.curs_set(0)
-    stdscr.clear()
-    stdscr.refresh()
+    def close(self):
+        self.__connection.close()
 
-    h, w = stdscr.getmaxyx()
 
-    # 公告表示欄
-    text_win_height = h - 15
-    text_win = curses.newwin(text_win_height, w, 0, 0)
+class ChatTelnetClient:
+    def __init__(self, host, port):
+        self.__connection = telnetlib.Telnet(host, port)
+        self.__connection.write('nobody\n'.encode(ENCODING))
+        
+    def write(self, message):
+        self.__connection.write(message.encode(ENCODING))
+        
+    def read(self):
+        return self.__connection.read_eager()
+    
+    def close(self):
+        self.__connection.close()
 
-    # チャット表示欄
-    chat_win_height = 9
-    chat_win = curses.newwin(chat_win_height, w, h - 12, 0)
 
-    # 入力欄
-    input_win = curses.newwin(3, w, h-3, 0)
-    input_win.border()
-    input_win.addstr(0, 2, " Input ")
-    input_win.addstr(1, 1, "Input: ")
-    input_win.nodelay(1)
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+class PublicNoticeWindow:
+    def __init__(self, height, width, start_y, start_x):
+        self.__window = curses.newwin(height, width, start_y, start_x)
+        self.height = height
+    
+    def show_messages(self, messages):
+        self.__window.clear()
+        self.__window.refresh()
+        if len(messages) > self.height:
+            for y, s in enumerate(messages[len(messages) - self.height:]):
+                self.__window.addstr(y, 1, s)
+        else:
+            for y, s in enumerate(messages):
+                self.__window.addstr(y, 1, s)
+        self.__window.refresh()
 
-    while True:
-        chat_chunk = tn_chat.read_eager()
+
+class ChatViewWindow:
+    def __init__(self, height, width, starty, startx):
+        self.__window = curses.newwin(height, width, starty, startx)
+    
+    def show_messages(self, messages, title=" Chat Message "):
+        self.__window.clear()
+        self.__window.border()
+        self.__window.addstr(0, 2, title)
+        self.__window.refresh()
+        for y, s in enumerate(messages):
+            self.__window.addstr(y + 1, 1, s)
+        self.__window.refresh()
+        
+
+class InputWindow:
+    def __init__(self, height, width, starty, startx):
+        self.__window = curses.newwin(height, width, starty, startx)
+        self.height = height
+        self.__ui_init()
+    
+    def __ui_init(self):
+        self.__window.clear()
+        self.__window.border()
+        self.__window.addstr(0, 2, " Input Message ")
+        self.__window.addstr(1, 1, "Input: ")
+        self.__window.nodelay(1)
+        
+    def update_message(self, message):
+        self.__ui_init()
+        self.__window.addstr(1, 1, f"Input: {message}")
+        self.__window.refresh()
+        
+    def get_wch(self):
+        return self.__window.get_wch()
+    
+
+class Application:
+    def __init__(self, stdscr):
+        self.stdscr = stdscr
+        self.chat_messages = []
+        self.receive_message = ''
+        self.message = ''
+        self.public_notice_telnet_client = PublicNoticeTelnetClient(HOST, PORT)
+        self.chat_telnet_client = ChatTelnetClient(HOST, PORT)
+        self.ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        self.init_ui()
+        
+    def init_ui(self):
+        locale.setlocale(locale.LC_ALL, '')
+        curses.nl()
+        curses.raw()
+        curses.curs_set(0)
+        self.stdscr.clear()
+        self.stdscr.refresh()
+        
+        h, w = self.stdscr.getmaxyx()
+
+        public_notice_win_height = h - 15
+        self.public_notice_win = PublicNoticeWindow(public_notice_win_height, w, 0, 0)
+        chat_view_win_height = 9
+        self.chat_view_win = ChatViewWindow(chat_view_win_height, w, h - 12, 0)
+        self.input_win = InputWindow(3, w, h-3, 0)
+    
+    def send_message_to_server(self):
+        self.tn_chat.write(f'{self.message}\n')
+
+    def show_chat_messages(self, chat_chunk):
         if chat_chunk:
-            if len(chat_messages) > 6:
-                chat_messages = chat_messages[1:]
+            if len(self.chat_messages) > 6:
+                self.chat_messages = self.chat_messages[1:]
             try:
-                chat_messages.append(ansi_escape.sub('', chat_chunk.decode('shift_jis').replace('\r', '').replace('\n', '')))
+                self.chat_messages.append(self.ansi_escape.sub('', chat_chunk.decode(ENCODING).replace('\r', '').replace('\n', '')))
             except UnicodeDecodeError:
                 pass
-            show_user_chat(chat_win, chat_messages, chat_win_height)
-        chunk = tn.read_eager()
-        if chunk:
+            self.chat_view_win.show_messages(self.chat_messages)
+
+    def show_public_notice(self, public_notice_chunk):
+        if public_notice_chunk:
             try:
-                decoded_chunk = chunk.decode('shift_jis')
-                receive_message += decoded_chunk
-                receive_message = ansi_escape.sub('', receive_message)
-                show_server_message(text_win, receive_message, text_win_height)
+                decoded_chunk = public_notice_chunk.decode(ENCODING)
+                self.receive_message += decoded_chunk
+                self.receive_message = self.ansi_escape.sub('', self.receive_message)
+                self.public_notice_win.show_messages(self.receive_message.split('\r\n'))
             except UnicodeDecodeError:
                 pass
+
+    def is_input_delete_key(self, c):
+        return c == curses.KEY_BACKSPACE or c == '\x08' or c == '\x7f'
+
+    def input_control(self) -> bool:
+        ENTER = '\n'
+        EXIT = 'exit'
+
         try:
-            c = input_win.get_wch()
-            if c == '\n':
-                if message == 'exit':
-                    tn.close()
-                    tn_chat.close()
-                    break
-
-                send_message_to_server(message)
-
-                message = ""
-                clear_input_win(input_win)
-            elif is_input_delete_key(c):
-                message = message[:-1]
-                delete_message_to_input_win(input_win, message)
+            c = self.input_win.get_wch()
+            if c == ENTER:
+                if self.message == EXIT:
+                    return True
+                else:
+                    self.sending_message()
+            elif self.is_input_delete_key(c):
+                self.message = self.message[:-1]
+                self.input_win.update_message(self.message)
             elif c != curses.ERR:
-                message += str(c)
-                add_message_to_input_win(input_win, str(c))
+                self.message += str(c)
+                self.input_win.update_message(self.message)
         except curses.error:
             pass
+        return False 
+    
+    def sending_message(self):
+        self.send_message_to_server()
+        self.message = ""
+        self.input_win.update_message(self.message)
+        
+    def exit(self):
+        self.public_notice_telnet_client.close()
+        self.chat_telnet_client.close()
+
+    def run(self):
+        while True:
+            chat_chunk = self.chat_telnet_client.read()
+            self.show_chat_messages(chat_chunk)
+
+            public_notice_chunk = self.public_notice_telnet_client.read()
+            self.show_public_notice(public_notice_chunk)
+
+            is_exit = self.input_control()
+            if is_exit:
+                self.exit()
+                break
+
+def main(stdscr):
+    app = Application(stdscr)
+    app.run()
+
 
 curses.wrapper(main)
-
-

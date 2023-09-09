@@ -65,8 +65,8 @@ class ChatViewWindow:
         self.__window.addstr(0, 2, title)
         self.__window.refresh()
         h, _ = self.__window.getmaxyx()
-        if len(messages) > (h//2 + 2):
-            for y, s in enumerate(messages[len(messages) - (h//2 + 2) - 1:]):
+        if len(messages) > h - 2:
+            for y, s in enumerate(messages[len(messages) - (h - 2):]):
                 self.__window.addstr(y + 1, 1, s)
         else:
             for y, s in enumerate(messages):
@@ -107,7 +107,7 @@ class Application:
         self.ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         self.init_ui()
         
-    def init_ui(self):
+    def init_ui(self, chat_view_win_height=10):
         locale.setlocale(locale.LC_ALL, '')
         curses.nl()
         curses.raw()
@@ -117,12 +117,13 @@ class Application:
         
         h, w = self.stdscr.getmaxyx()
 
-        public_notice_win_height = h - 15
+        input_win_height = 3  # 入力欄(入力[1行]+枠[2行])
+
+        # 入力欄(3行)+チャットメッセージ表示欄(chat_view_win_height+枠[2行])+公告の下部マージン(1行)を除いた残りすべてを公告表示欄とする
+        public_notice_win_height = h - (chat_view_win_height + input_win_height + 2) - 1
         self.public_notice_win = PublicNoticeWindow(public_notice_win_height, w, 0, 0)
-        chat_view_win_height = 9
-        self.chat_view_win = ChatViewWindow(chat_view_win_height, w, h - 12, 0)
-        input_win_height = 3
-        self.chat_view_text_height = chat_view_win_height - input_win_height
+
+        self.chat_view_win = ChatViewWindow(chat_view_win_height + 2, w, h - (chat_view_win_height + input_win_height + 2), 0)
         self.input_win = InputWindow(input_win_height, w, h-input_win_height, 0)
     
     def send_message_to_server(self):

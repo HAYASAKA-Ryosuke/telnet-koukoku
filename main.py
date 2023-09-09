@@ -73,9 +73,9 @@ class InputWindow:
     def __init__(self, height, width, starty, startx):
         self.__window = curses.newwin(height, width, starty, startx)
         self.height = height
-        self.__ui_init()
+        self.__init_ui()
     
-    def __ui_init(self):
+    def __init_ui(self):
         self.__window.clear()
         self.__window.border()
         self.__window.addstr(0, 2, " Input Message ")
@@ -83,7 +83,7 @@ class InputWindow:
         self.__window.nodelay(1)
         
     def update_message(self, message):
-        self.__ui_init()
+        self.__init_ui()
         self.__window.addstr(1, 1, f"Input: {message}")
         self.__window.refresh()
         

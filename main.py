@@ -57,20 +57,20 @@ class PublicNoticeWindow:
 
 class ChatViewWindow:
     def __init__(self, height, width, starty, startx):
-        self.__position = 0
+        self.__scroll_offset = 0
         self.__window = curses.newwin(height, width, starty, startx)
 
-    def increment_position(self, messages_length):
+    def increment_scroll_offset(self, messages_length):
         h, _ = self.__window.getmaxyx()
-        if self.__position < messages_length - (h - 2) - 1:
-            self.__position += 1
+        if self.__scroll_offset < messages_length - (h - 2) - 1:
+            self.__scroll_offset += 1
 
-    def reset_position(self):
-        self.__position = 0
+    def reset_scroll_offset(self):
+        self.__scroll_offset = 0
 
-    def decrement_position(self):
-        if self.__position > 0:
-            self.__position -= 1
+    def decrement_scroll_offset(self):
+        if self.__scroll_offset > 0:
+            self.__scroll_offset -= 1
     
     def show_messages(self, messages, title=" Chat Message "):
         self.__window.clear()
@@ -79,10 +79,10 @@ class ChatViewWindow:
         self.__window.refresh()
         h, _ = self.__window.getmaxyx()
         if len(messages) > h - 2:
-            for y, s in enumerate(messages[len(messages) - (h - 2) - self.__position:len(messages) - self.__position]):
+            for y, s in enumerate(messages[len(messages) - (h - 2) - self.__scroll_offset:len(messages) - self.__scroll_offset]):
                 self.__window.addstr(y + 1, 1, s)
         else:
-            self.reset_position()
+            self.reset_scroll_offset()
             for y, s in enumerate(messages):
                 self.__window.addstr(y + 1, 1, s)
         self.__window.refresh()
@@ -176,10 +176,10 @@ class Application:
                 else:
                     self.sending_message()
             elif c == curses.KEY_UP:
-                self.chat_view_win.increment_position(len(self.chat_messages))
+                self.chat_view_win.increment_scroll_offset(len(self.chat_messages))
                 self.chat_view_win.show_messages(re.compile(r'>>\s*(.*?)\s*<<').findall(''.join(self.chat_messages)))
             elif c == curses.KEY_DOWN:
-                self.chat_view_win.decrement_position()
+                self.chat_view_win.decrement_scroll_offset()
                 self.chat_view_win.show_messages(re.compile(r'>>\s*(.*?)\s*<<').findall(''.join(self.chat_messages)))
             elif self.is_input_delete_key(c):
                 self.message = self.message[:-1]
@@ -194,7 +194,7 @@ class Application:
     def sending_message(self):
         self.send_message_to_server()
         self.message = ""
-        self.chat_view_win.reset_position()
+        self.chat_view_win.reset_scroll_offset()
         self.input_win.update_message(self.message)
         
     def exit(self):

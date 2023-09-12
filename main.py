@@ -141,7 +141,7 @@ class Application:
     def send_message_to_server(self):
         self.chat_telnet_client.write(f'{self.message}\n')
 
-    def show_chat_messages(self, chat_chunk):
+    def update_chat_messages(self, chat_chunk):
         if chat_chunk:
             try:
                 self.chat_messages.append(self.ansi_escape.sub('', chat_chunk.decode(ENCODING).replace('\r', '').replace('\n', '')))
@@ -149,7 +149,7 @@ class Application:
                 pass
             self.chat_view_win.show_messages(re.compile(r'>>\s*(.*?)\s*<<').findall(''.join(self.chat_messages)))
 
-    def show_public_notice(self, public_notice_chunk):
+    def update_public_notice(self, public_notice_chunk):
         if public_notice_chunk:
             try:
                 decoded_chunk = public_notice_chunk.decode(ENCODING)
@@ -165,7 +165,6 @@ class Application:
     def input_control(self) -> bool:
         ENTER = '\n'
         EXIT = 'exit'
-
         try:
             c = self.input_win.get_wch()
             if c == ENTER:
@@ -201,10 +200,10 @@ class Application:
     def run(self):
         while True:
             chat_chunk = self.chat_telnet_client.read()
-            self.show_chat_messages(chat_chunk)
+            self.update_chat_messages(chat_chunk)
 
             public_notice_chunk = self.public_notice_telnet_client.read()
-            self.show_public_notice(public_notice_chunk)
+            self.update_public_notice(public_notice_chunk)
 
             is_exit = self.input_control()
             if is_exit:

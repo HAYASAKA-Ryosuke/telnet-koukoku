@@ -57,17 +57,20 @@ class PublicNoticeWindow:
 
 class ChatViewWindow:
     def __init__(self, height, width, starty, startx):
-        self.position = 0
+        self.__position = 0
         self.__window = curses.newwin(height, width, starty, startx)
 
     def increment_position(self, messages_length):
         h, _ = self.__window.getmaxyx()
-        if self.position < messages_length - (h - 2) - 1:
-            self.position += 1
+        if self.__position < messages_length - (h - 2) - 1:
+            self.__position += 1
+
+    def reset_position(self):
+        self.__position = 0
 
     def decrement_position(self):
-        if self.position > 0:
-            self.position -= 1
+        if self.__position > 0:
+            self.__position -= 1
     
     def show_messages(self, messages, title=" Chat Message "):
         self.__window.clear()
@@ -76,10 +79,10 @@ class ChatViewWindow:
         self.__window.refresh()
         h, _ = self.__window.getmaxyx()
         if len(messages) > h - 2:
-            for y, s in enumerate(messages[len(messages) - (h - 2) - self.position:len(messages) - self.position]):
+            for y, s in enumerate(messages[len(messages) - (h - 2) - self.__position:len(messages) - self.__position]):
                 self.__window.addstr(y + 1, 1, s)
         else:
-            self.position = 0
+            self.reset_position()
             for y, s in enumerate(messages):
                 self.__window.addstr(y + 1, 1, s)
         self.__window.refresh()
@@ -191,6 +194,7 @@ class Application:
     def sending_message(self):
         self.send_message_to_server()
         self.message = ""
+        self.chat_view_win.reset_position()
         self.input_win.update_message(self.message)
         
     def exit(self):

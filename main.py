@@ -79,6 +79,7 @@ class ChatViewWindow:
             for y, s in enumerate(messages[len(messages) - (h - 2) - self.position:len(messages) - self.position]):
                 self.__window.addstr(y + 1, 1, s)
         else:
+            self.position = 0
             for y, s in enumerate(messages):
                 self.__window.addstr(y + 1, 1, s)
         self.__window.refresh()

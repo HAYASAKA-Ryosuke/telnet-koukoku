@@ -57,7 +57,17 @@ class PublicNoticeWindow:
 
 class ChatViewWindow:
     def __init__(self, height, width, starty, startx):
+        self.position = 0
         self.__window = curses.newwin(height, width, starty, startx)
+
+    def increment_position(self, messages_length):
+        h, _ = self.__window.getmaxyx()
+        if self.position < messages_length - (h - 2) - 1:
+            self.position += 1
+
+    def decrement_position(self):
+        if self.position > 0:
+            self.position -= 1
     
     def show_messages(self, messages, title=" Chat Message "):
         self.__window.clear()
@@ -66,7 +76,7 @@ class ChatViewWindow:
         self.__window.refresh()
         h, _ = self.__window.getmaxyx()
         if len(messages) > h - 2:
-            for y, s in enumerate(messages[len(messages) - (h - 2):]):
+            for y, s in enumerate(messages[len(messages) - (h - 2) - self.position:len(messages) - self.position]):
                 self.__window.addstr(y + 1, 1, s)
         else:
             for y, s in enumerate(messages):
@@ -77,6 +87,7 @@ class ChatViewWindow:
 class InputWindow:
     def __init__(self, height, width, starty, startx):
         self.__window = curses.newwin(height, width, starty, startx)
+        self.__window.keypad(True)
         self.height = height
         self.__init_ui()
     
@@ -161,6 +172,12 @@ class Application:
                     return True
                 else:
                     self.sending_message()
+            elif c == curses.KEY_UP:
+                self.chat_view_win.increment_position(len(self.chat_messages))
+                self.chat_view_win.show_messages(re.compile(r'>>\s*(.*?)\s*<<').findall(''.join(self.chat_messages)))
+            elif c == curses.KEY_DOWN:
+                self.chat_view_win.decrement_position()
+                self.chat_view_win.show_messages(re.compile(r'>>\s*(.*?)\s*<<').findall(''.join(self.chat_messages)))
             elif self.is_input_delete_key(c):
                 self.message = self.message[:-1]
                 self.input_win.update_message(self.message)
